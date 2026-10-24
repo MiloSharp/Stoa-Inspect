@@ -14,7 +14,7 @@ import (
 	"github.com/MiloSharp/Stoa-Inspect/internal/report"
 )
 
-const version = "0.2.0"
+const version = "0.3.0"
 
 func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }
 func run(args []string, stdout, stderr io.Writer) int {

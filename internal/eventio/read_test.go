@@ -38,3 +38,17 @@ func TestReadRejectsEmpty(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestReadDocumentIncludesWorldTopology(t *testing.T) {
+	input := `{"locations":{"Agora":{"name":"Agora","description":"Shared space","exits":{"Archive":{"duration":2}}},"Archive":{"name":"Archive","exits":{}}},"events":[` + first + `]}`
+	document, err := ReadDocument(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(document.Events) != 1 || document.Locations["Agora"].Description != "Shared space" {
+		t.Fatalf("unexpected document: %#v", document)
+	}
+	if document.Locations["Agora"].Exits["Archive"].Duration != 2 {
+		t.Fatalf("topology not decoded: %#v", document.Locations)
+	}
+}

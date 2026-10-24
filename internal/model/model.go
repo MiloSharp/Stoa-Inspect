@@ -60,6 +60,16 @@ type Proposal struct {
 	Status string `json:"status"`
 }
 
+type Exit struct {
+	Duration int64 `json:"duration"`
+}
+
+type WorldLocation struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Exits       map[string]Exit `json:"exits,omitempty"`
+}
+
 type Event struct {
 	ID          string          `json:"id"`
 	Sequence    int64           `json:"sequence"`

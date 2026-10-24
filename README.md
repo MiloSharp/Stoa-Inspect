@@ -2,7 +2,7 @@
 
 Stoa-Inspect is a read-only Go tool for auditing and observing event streams exported by [The Stoa](https://github.com/MiloSharp/Stoa). It produces a concise, human-readable operations report by default, can emit structured JSON for automation, and includes **Stoa Watch**: a live local portal with exploratory World and factual Chronicle views.
 
-The tool never connects to or modifies a running Stoa instance. It reads an export, validates it, reports what it found, and exits.
+The audit command reads an export, validates it, reports what it found, and exits. Stoa Watch may observe a running local Stoa endpoint, but it remains read-only and never modifies the simulation.
 
 ## Watch the simulation
 
@@ -24,7 +24,7 @@ For safety, URL sources must resolve to the local computer; arbitrary remote eve
 
 The portal provides:
 
-- **World** — locations, actors, activities, proposals, and text-adventure-style observer commands
+- **World** — locations, directed exits with travel times, actors, activities, proposals, and text-adventure-style observer commands
 - **Chronicle** — deterministic prose grounded only in recorded events
 - **Evidence** — event counts and Stoa-Inspect integrity findings
 - Commands including `look`, `go`, `who`, `follow`, `time`, `proposals`, `chronicle`, and `evidence`

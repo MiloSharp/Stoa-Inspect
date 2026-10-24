@@ -33,8 +33,15 @@ type Actor struct {
 }
 
 type Location struct {
-	Name   string   `json:"name"`
-	Actors []string `json:"actors"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Actors      []string `json:"actors"`
+	Exits       []Exit   `json:"exits"`
+}
+
+type Exit struct {
+	Destination string `json:"destination"`
+	Duration    int64  `json:"duration"`
 }
 
 type Proposal struct {
@@ -61,6 +68,10 @@ type activityState struct {
 }
 
 func Build(events []model.Event, source, toolVersion string, includePrivate bool) View {
+	return BuildWithWorld(events, source, toolVersion, includePrivate, nil)
+}
+
+func BuildWithWorld(events []model.Event, source, toolVersion string, includePrivate bool, world map[string]model.WorldLocation) View {
 	result := audit.Run(events, source, toolVersion, audit.Options{})
 	view := View{
 		Source: source, TotalEvents: len(events), Findings: result.Findings, AuditStatus: result.Summary.Status,
@@ -164,9 +175,24 @@ func Build(events []model.Event, source, toolVersion string, includePrivate bool
 	for _, actor := range view.Actors {
 		locations[actor.Location] = append(locations[actor.Location], actor.Name)
 	}
+	for name := range world {
+		if _, exists := locations[name]; !exists {
+			locations[name] = []string{}
+		}
+	}
 	for location, names := range locations {
 		sort.Strings(names)
-		view.Locations = append(view.Locations, Location{Name: location, Actors: names})
+		item := Location{Name: location, Actors: names, Exits: []Exit{}}
+		if known, exists := world[location]; exists {
+			item.Description = known.Description
+			for destination, exit := range known.Exits {
+				item.Exits = append(item.Exits, Exit{Destination: destination, Duration: exit.Duration})
+			}
+			sort.Slice(item.Exits, func(i, j int) bool {
+				return strings.ToLower(item.Exits[i].Destination) < strings.ToLower(item.Exits[j].Destination)
+			})
+		}
+		view.Locations = append(view.Locations, item)
 	}
 	sort.Slice(view.Locations, func(i, j int) bool {
 		return strings.ToLower(view.Locations[i].Name) < strings.ToLower(view.Locations[j].Name)

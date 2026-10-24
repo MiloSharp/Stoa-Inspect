@@ -116,11 +116,11 @@ func readView(source, toolVersion string, includePrivate bool) (observer.View, e
 		return observer.View{}, err
 	}
 	defer reader.Close()
-	events, err := eventio.Read(reader)
+	document, err := eventio.ReadDocument(reader)
 	if err != nil {
 		return observer.View{}, fmt.Errorf("read event stream: %w", err)
 	}
-	return observer.Build(events, source, toolVersion, includePrivate), nil
+	return observer.BuildWithWorld(document.Events, source, toolVersion, includePrivate, document.Locations), nil
 }
 
 func openSource(source string) (io.ReadCloser, error) {

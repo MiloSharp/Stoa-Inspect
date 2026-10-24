@@ -14,32 +14,63 @@ import (
 const maxInputBytes = 64 << 20
 
 func Read(reader io.Reader) ([]model.Event, error) {
+	document, err := ReadDocument(reader)
+	if err != nil {
+		return nil, err
+	}
+	return document.Events, nil
+}
+
+type Document struct {
+	Events    []model.Event
+	Locations map[string]model.WorldLocation
+}
+
+func ReadDocument(reader io.Reader) (Document, error) {
 	data, err := io.ReadAll(io.LimitReader(reader, maxInputBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("read input: %w", err)
+		return Document{}, fmt.Errorf("read input: %w", err)
 	}
 	if len(data) > maxInputBytes {
-		return nil, fmt.Errorf("input exceeds %d MiB safety limit", maxInputBytes>>20)
+		return Document{}, fmt.Errorf("input exceeds %d MiB safety limit", maxInputBytes>>20)
 	}
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 {
-		return nil, fmt.Errorf("input is empty")
+		return Document{}, fmt.Errorf("input is empty")
 	}
 	switch trimmed[0] {
 	case '[':
-		return readArray(trimmed)
+		events, err := readArray(trimmed)
+		return Document{Events: events}, err
 	case '{':
 		var object map[string]json.RawMessage
 		if err := json.Unmarshal(trimmed, &object); err == nil {
 			if rawEvents, ok := object["events"]; ok {
-				return readArray(rawEvents)
+				events, err := readArray(rawEvents)
+				if err != nil {
+					return Document{}, err
+				}
+				locations := map[string]model.WorldLocation{}
+				if rawLocations, ok := object["locations"]; ok {
+					if err := json.Unmarshal(rawLocations, &locations); err != nil {
+						return Document{}, fmt.Errorf("decode world locations: %w", err)
+					}
+					for name, location := range locations {
+						if strings.TrimSpace(location.Name) == "" {
+							location.Name = name
+							locations[name] = location
+						}
+					}
+				}
+				return Document{Events: events, Locations: locations}, nil
 			}
 			if event, err := decodeEvent(trimmed); err == nil {
-				return []model.Event{event}, nil
+				return Document{Events: []model.Event{event}}, nil
 			}
 		}
 	}
-	return readNDJSON(trimmed)
+	events, err := readNDJSON(trimmed)
+	return Document{Events: events}, err
 }
 
 func readArray(data []byte) ([]model.Event, error) {

@@ -55,3 +55,20 @@ func TestMovementUsesPreviouslyObservedOrigin(t *testing.T) {
 		t.Fatalf("unexpected movement origin: %#v", view.Chronicle[2])
 	}
 }
+
+func TestBuildWithWorldIncludesEmptyPlacesAndRoutes(t *testing.T) {
+	world := map[string]model.WorldLocation{
+		"Agora":   {Name: "Agora", Description: "Shared space", Exits: map[string]model.Exit{"Archive": {Duration: 2}}},
+		"Archive": {Name: "Archive", Description: "Records", Exits: map[string]model.Exit{}},
+	}
+	view := BuildWithWorld(nil, "test", "dev", false, world)
+	if len(view.Locations) != 2 {
+		t.Fatalf("expected every known location: %#v", view.Locations)
+	}
+	if view.Locations[0].Name != "Agora" || view.Locations[0].Description != "Shared space" || len(view.Locations[0].Exits) != 1 {
+		t.Fatalf("unexpected topology: %#v", view.Locations[0])
+	}
+	if view.Locations[0].Exits[0].Destination != "Archive" || view.Locations[0].Exits[0].Duration != 2 {
+		t.Fatalf("unexpected route: %#v", view.Locations[0].Exits[0])
+	}
+}

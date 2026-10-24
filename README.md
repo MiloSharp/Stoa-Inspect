@@ -1,8 +1,35 @@
 # Stoa-Inspect
 
-Stoa-Inspect is a read-only Go command-line tool for auditing event streams exported by [The Stoa](https://github.com/MiloSharp/Stoa). It produces a concise, human-readable operations report by default and can emit the same findings as structured JSON for automation.
+Stoa-Inspect is a read-only Go tool for auditing and observing event streams exported by [The Stoa](https://github.com/MiloSharp/Stoa). It produces a concise, human-readable operations report by default, can emit structured JSON for automation, and includes **Stoa Watch**: a live local portal with exploratory World and factual Chronicle views.
 
 The tool never connects to or modifies a running Stoa instance. It reads an export, validates it, reports what it found, and exits.
+
+## Watch the simulation
+
+Start the local observer portal against an event file:
+
+```powershell
+go run ./cmd/stoa-inspect watch examples/valid.ndjson
+```
+
+Then open [http://127.0.0.1:8791](http://127.0.0.1:8791). Stoa Watch rereads the source as events are appended and updates the browser automatically. If it catches a partially written final event, it keeps displaying the last complete state until the write finishes.
+
+To observe a running local Stoa server directly, give Watch its state endpoint and choose an unused portal port:
+
+```powershell
+go run ./cmd/stoa-inspect watch http://127.0.0.1:8787/api/state
+```
+
+For safety, URL sources must resolve to the local computer; arbitrary remote event URLs are rejected.
+
+The portal provides:
+
+- **World** — locations, actors, activities, proposals, and text-adventure-style observer commands
+- **Chronicle** — deterministic prose grounded only in recorded events
+- **Evidence** — event counts and Stoa-Inspect integrity findings
+- Commands including `look`, `go`, `who`, `follow`, `time`, `proposals`, `chronicle`, and `evidence`
+
+Private events are withheld by default. They can be displayed deliberately with `--include-private`. The server binds only to the local computer by default and refuses a remote-facing address unless `--allow-remote` is explicitly supplied.
 
 ## What it checks
 

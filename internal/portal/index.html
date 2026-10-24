@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stoa Watch</title>
+  <style>
+    :root{--ink:#e8e2d3;--muted:#9b978e;--panel:#171a1d;--line:#32363a;--gold:#c9a85e;--rust:#a9654d;--green:#6f9a7d;--bg:#0e1012}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0,#20201c 0,#111315 38%,var(--bg) 75%);color:var(--ink);font:15px/1.55 Georgia,serif;min-height:100vh}
+    button,input{font:inherit}.shell{max-width:1440px;margin:auto;padding:24px}.mast{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0 18px}
+    .eyebrow,.label{font:11px/1.2 Consolas,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+    h1{margin:4px 0 0;font-size:clamp(28px,5vw,54px);font-weight:400;letter-spacing:.04em}.status{text-align:right;color:var(--muted)}.status strong{color:var(--green)}
+    .tabs{display:flex;gap:6px;margin:18px 0}.tabs button,.place{background:transparent;color:var(--muted);border:1px solid transparent;padding:9px 13px;cursor:pointer}
+    .tabs button.active,.tabs button:hover,.place:hover,.place.active{color:var(--ink);border-color:var(--line);background:#ffffff08}.notice{display:none;padding:8px 12px;background:#7f4b3828;border:1px solid var(--rust);margin-bottom:14px;color:#e2b7a7}
+    .view{display:none}.view.active{display:block}.world-grid{display:grid;grid-template-columns:230px minmax(300px,1fr) 300px;gap:14px}.panel{background:#141719e8;border:1px solid var(--line);min-height:240px;padding:18px}
+    .panel h2{font-weight:400;margin:5px 0 16px;font-size:22px}.places{display:flex;flex-direction:column;align-items:stretch}.place{text-align:left;border-bottom:1px solid #2a2d30}.place small{display:block;color:var(--muted)}
+    .scene{min-height:360px}.scene-name{font-size:30px;margin:8px 0 4px;font-weight:400}.scene-desc{color:#bab5aa;max-width:65ch}.actor{padding:12px 0;border-bottom:1px solid #292d30}.actor strong{display:block;font-weight:400;color:#f2e4bd}.actor span{color:var(--muted)}
+    .empty{color:var(--muted);font-style:italic}.chronicle{max-width:900px;margin:auto}.entry{display:grid;grid-template-columns:90px 1fr;gap:22px;padding:20px 0;border-bottom:1px solid var(--line)}.entry time{color:var(--gold);font:13px Consolas,monospace}.entry h3{font-weight:400;margin:0 0 5px}.entry p{margin:0;color:#c8c2b6}.meta{font:11px Consolas,monospace;color:var(--muted);margin-top:8px}
+    .evidence-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.metric{padding:15px;background:var(--panel);border:1px solid var(--line)}.metric b{display:block;font-size:25px;font-weight:400}.findings{background:var(--panel);border:1px solid var(--line)}.finding{display:grid;grid-template-columns:80px 150px 1fr;gap:10px;padding:12px;border-bottom:1px solid var(--line);font-family:Consolas,monospace;font-size:12px}.error{color:#dc8b75}.warning{color:#ddbd74}
+    .terminal{margin-top:14px;background:#101214;border:1px solid var(--line);font-family:Consolas,monospace}.terminal-log{height:135px;overflow:auto;padding:12px;color:#b6c5b9;white-space:pre-wrap}.prompt{display:flex;border-top:1px solid var(--line)}.prompt span{padding:10px 0 10px 12px;color:var(--gold)}.prompt input{flex:1;border:0;outline:0;background:transparent;color:var(--ink);padding:10px}
+    footer{display:flex;justify-content:space-between;margin-top:12px;color:var(--muted);font:11px Consolas,monospace}
+    @media(max-width:900px){.world-grid{grid-template-columns:1fr}.places{flex-direction:row;overflow:auto}.place{min-width:160px}.evidence-grid{grid-template-columns:1fr 1fr}.finding{grid-template-columns:70px 1fr}.finding span:last-child{grid-column:1/-1}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header class="mast">
+    <div><div class="eyebrow">The Stoa · Observer Portal</div><h1>Stoa Watch</h1></div>
+    <div class="status"><div id="connection">Connecting…</div><div><strong id="run-state">—</strong> · <span id="clock">t=—</span></div></div>
+  </header>
+  <nav class="tabs" aria-label="Views">
+    <button class="active" data-view="world">World</button><button data-view="chronicle">Chronicle</button><button data-view="evidence">Evidence</button>
+  </nav>
+  <div id="notice" class="notice"></div>
+  <section id="world" class="view active">
+    <div class="world-grid">
+      <aside class="panel"><div class="label">Places</div><h2>Known world</h2><div id="places" class="places"></div></aside>
+      <article class="panel scene"><div class="label">Current location</div><h2 id="scene-name" class="scene-name">Waiting for events</h2><p id="scene-desc" class="scene-desc">The observer is reconstructing the world from Stoa's event stream.</p><div id="scene-actors"></div></article>
+      <aside class="panel"><div class="label">People</div><h2>Actors</h2><div id="actors"></div><div class="label" style="margin-top:24px">Open proposals</div><div id="proposals"></div></aside>
+    </div>
+  </section>
+  <section id="chronicle" class="view"><div class="chronicle"><div class="label">A factual account · latest 200 events</div><h2>The Chronicle</h2><div id="entries"></div></div></section>
+  <section id="evidence" class="view">
+    <div id="metrics" class="evidence-grid"></div>
+    <div class="findings"><div class="finding"><b>Severity</b><b>Code</b><b>Finding</b></div><div id="findings"></div></div>
+  </section>
+  <section class="terminal" aria-label="Observer command line">
+    <div id="terminal-log" class="terminal-log">Stoa Watch is read-only. Type “help” for observer commands.</div>
+    <form id="command-form" class="prompt"><span>&gt;&nbsp;</span><input id="command" autocomplete="off" aria-label="Observer command" placeholder="look, go archive, follow athena, chronicle…"></form>
+  </section>
+  <footer><span id="source">Source: —</span><span id="event-count">0 visible events</span></footer>
+</main>
+<script>
+let state=null,selectedLocation="",currentView="world";
+const $=id=>document.getElementById(id);
+const text=(tag,value,cls)=>{const e=document.createElement(tag);e.textContent=value;if(cls)e.className=cls;return e};
+function setView(name){currentView=name;document.querySelectorAll(".view").forEach(e=>e.classList.toggle("active",e.id===name));document.querySelectorAll(".tabs button").forEach(e=>e.classList.toggle("active",e.dataset.view===name))}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+function render(s){
+  state=s;$("run-state").textContent=s.paused?"PAUSED":"RUNNING";$("clock").textContent="t="+s.clock;
+  $("source").textContent="Source: "+s.source;$("event-count").textContent=s.visibleEvents+" visible of "+s.totalEvents+" events";
+  if(!selectedLocation||!s.locations.some(l=>l.name===selectedLocation))selectedLocation=s.locations[0]?.name||"";
+  const places=$("places");places.replaceChildren();
+  s.locations.forEach(l=>{const b=text("button",l.name,"place"+(l.name===selectedLocation?" active":""));b.append(text("small",l.actors.length+" present"));b.onclick=()=>{selectedLocation=l.name;render(s)};places.append(b)});
+  $("scene-name").textContent=selectedLocation||"The world is quiet";
+  const here=s.actors.filter(a=>a.location===selectedLocation);
+  $("scene-desc").textContent=here.length?here.length+" "+(here.length===1?"person is":"people are")+" presently known here.":"No actors are presently known to be here.";
+  const sa=$("scene-actors");sa.replaceChildren();here.forEach(a=>sa.append(actorNode(a)));
+  const actors=$("actors");actors.replaceChildren();s.actors.forEach(a=>actors.append(actorNode(a)));if(!s.actors.length)actors.append(text("p","No actors observed.","empty"));
+  const proposals=$("proposals");proposals.replaceChildren();const openProposals=s.proposals.filter(p=>p.status==="pending");openProposals.forEach(p=>proposals.append(text("p",p.id+" — pending")));if(!openProposals.length)proposals.append(text("p","No open proposals.","empty"));
+  const entries=$("entries");entries.replaceChildren();s.chronicle.slice(-200).reverse().forEach(e=>{const row=text("article","","entry");row.append(text("time","t="+e.time));const body=document.createElement("div");body.append(text("h3",e.title),text("p",e.text),text("div","event "+e.sequence+(e.location?" · "+e.location:"")+" · "+e.visibility,"meta"));row.append(body);entries.append(row)});
+  const metrics=$("metrics");metrics.replaceChildren();[["Clock","t="+s.clock],["Visible events",s.visibleEvents],["Private withheld",s.privateEvents],["Audit",s.auditStatus]].forEach(([k,v])=>{const m=text("div","","metric");m.append(text("span",k,"label"),text("b",String(v)));metrics.append(m)});
+  const findings=$("findings");findings.replaceChildren();s.findings.slice(-100).forEach(f=>{const row=text("div","","finding");row.append(text("span",f.severity,f.severity),text("span",f.code),text("span",f.message));findings.append(row)});if(!s.findings.length)findings.append(text("p","No integrity findings.","empty"));
+}
+function actorNode(a){const e=text("div","","actor");e.append(text("strong",a.name),text("span",a.location+" · "+(a.activity||a.status)));return e}
+function log(message){const e=$("terminal-log");e.textContent+=(e.textContent?"\n":"")+message;e.scrollTop=e.scrollHeight}
+function command(raw){
+  const [verb,...rest]=raw.trim().split(/\s+/),arg=rest.join(" ").toLowerCase();if(!verb)return;
+  if(!state){log("The world state is not available yet.");return}
+  switch(verb.toLowerCase()){
+    case"help":log("Observer commands: look [place], go <place>, who, follow <actor>, time, proposals, world, chronicle, evidence, refresh, clear");break;
+    case"world":setView("world");break;case"chronicle":setView("chronicle");break;case"evidence":setView("evidence");break;
+    case"look":case"go":{const l=arg?state.locations.find(x=>x.name.toLowerCase().includes(arg)):state.locations.find(x=>x.name===selectedLocation);if(!l){log("No such known place.");break}selectedLocation=l.name;setView("world");render(state);log(l.name+": "+(l.actors.length?l.actors.join(", "):"nobody observed")+".");break}
+    case"who":log(state.actors.length?state.actors.map(a=>a.name+" — "+a.location+", "+(a.activity||a.status)).join("\n"):"No actors observed.");break;
+    case"follow":{const a=state.actors.find(x=>x.name.toLowerCase().includes(arg));if(!a){log("No such observed actor.");break}selectedLocation=a.location;setView("world");render(state);log("Following "+a.name+" at "+a.location+".");break}
+    case"time":log("Simulation time is t="+state.clock+"; the run is "+(state.paused?"paused":"running")+".");break;
+    case"proposals":{const open=state.proposals.filter(p=>p.status==="pending");log(open.length?open.map(p=>p.id+" — pending").join("\n"):"No open proposals.");break}
+    case"refresh":load();break;case"clear":$("terminal-log").textContent="";break;default:log("Unknown observer command “"+verb+"”. Type “help”.")
+  }
+}
+$("command-form").onsubmit=e=>{e.preventDefault();const i=$("command");log("> "+i.value);command(i.value);i.value=""};
+async function load(){try{const r=await fetch("/api/state");const payload=await r.json();if(payload.view)render(payload.view);$("connection").textContent=payload.stale?"Holding last complete state":"Live observer connected";$("notice").style.display=payload.error?"block":"none";$("notice").textContent=payload.error?"Waiting for the next complete event: "+payload.error:""}catch(e){$("connection").textContent="Observer disconnected";$("notice").style.display="block";$("notice").textContent=e.message}}
+const stream=new EventSource("/api/stream");stream.addEventListener("update",load);stream.onopen=()=>{$("connection").textContent="Live observer connected"};stream.onerror=()=>{$("connection").textContent="Reconnecting…"};load();
+</script>
+</body>
+</html>

@@ -10,10 +10,11 @@ import (
 	"github.com/MiloSharp/Stoa-Inspect/internal/audit"
 	"github.com/MiloSharp/Stoa-Inspect/internal/eventio"
 	"github.com/MiloSharp/Stoa-Inspect/internal/model"
+	"github.com/MiloSharp/Stoa-Inspect/internal/portal"
 	"github.com/MiloSharp/Stoa-Inspect/internal/report"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }
 func run(args []string, stdout, stderr io.Writer) int {
@@ -25,12 +26,46 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "stoa-inspect %s\n", version)
 		return 0
 	}
+	if args[0] == "watch" {
+		return runWatch(args[1:], stdout, stderr)
+	}
 	if args[0] != "audit" {
 		fmt.Fprintf(stderr, "unknown command %q\n\n", args[0])
 		usage(stderr)
 		return 2
 	}
 	return runAudit(args[1:], stdout, stderr)
+}
+func runWatch(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("watch", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	listen := flags.String("listen", "127.0.0.1:8791", "local address for the observer portal")
+	includePrivate := flags.Bool("include-private", false, "include private events in the observer view")
+	allowRemote := flags.Bool("allow-remote", false, "allow binding beyond the local computer")
+	flags.Usage = func() { watchUsage(stderr) }
+	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if flags.NArg() != 1 {
+		fmt.Fprintln(stderr, "watch requires exactly one event file or local Stoa state URL")
+		watchUsage(stderr)
+		return 2
+	}
+	if !*allowRemote && !portal.IsLoopbackAddress(*listen) {
+		fmt.Fprintln(stderr, "refusing a non-local address without --allow-remote")
+		return 2
+	}
+	source := flags.Arg(0)
+	if err := portal.ValidateSource(source); err != nil {
+		fmt.Fprintf(stderr, "open input: %v\n", err)
+		return 2
+	}
+	portal.WriteStartup(stdout, *listen, source, *includePrivate)
+	if err := portal.New(source, version, *includePrivate).Listen(*listen); err != nil {
+		fmt.Fprintf(stderr, "portal stopped: %v\n", err)
+		return 2
+	}
+	return 0
 }
 func runAudit(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("audit", flag.ContinueOnError)
@@ -118,8 +153,11 @@ func openOutput(path string, stdout io.Writer) (io.Writer, func(), error) {
 	return f, func() { _ = f.Close() }, nil
 }
 func usage(w io.Writer) {
-	fmt.Fprintln(w, "Stoa-Inspect audits exported Stoa event streams without changing them.\n\nUsage:\n  stoa-inspect audit [options] <events.json|events.ndjson|->\n  stoa-inspect version\n\nHuman-readable output is the default. Use --format json for automation.")
+	fmt.Fprintln(w, "Stoa-Inspect audits and observes Stoa event streams without changing them.\n\nUsage:\n  stoa-inspect audit [options] <events.json|events.ndjson|->\n  stoa-inspect watch [options] <event-file|local-state-url>\n  stoa-inspect version\n\nHuman-readable audit output is the default. The watch command starts a local observer portal.")
 }
 func auditUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: stoa-inspect audit [options] <events.json|events.ndjson|->\n\nOptions:\n  --format human|json\n  --severity info|warning|error\n  --actor NAME\n  --from-sequence N\n  --to-sequence N\n  --output FILE")
+}
+func watchUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: stoa-inspect watch [options] <event-file|local-state-url>\n\nOptions:\n  --listen ADDRESS       default: 127.0.0.1:8791\n  --include-private      include private events (off by default)\n  --allow-remote         permit a non-loopback listening address")
 }
